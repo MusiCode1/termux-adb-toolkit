@@ -20,6 +20,9 @@ Usage:
   adbtool tunnel <cmd>       Manage Cloudflare tunnel (up|down|status)
   adbtool shizuku <cmd>      Manage Shizuku (start|status)
   adbtool help               Show this help
+
+Agent automation guide (connection, Appium, Hebrew input, gotchas):
+  skill: phone-automation  (~/.agents/skills/phone-automation/SKILL.md)
 EOF
 }
 
@@ -60,7 +63,16 @@ case "$CMD" in
       stop adbd; sleep 1; start adbd
     " && echo "  Port $ADB_PORT set." || echo "  WARNING: Could not set stable port (Shizuku running?)."
     echo ""
-    echo "Done! TCP port $ADB_PORT active. Run 'adbtool tunnel up' to open CF tunnel."
+    echo "[ 5/5 ] Reconnecting ADB on TCP port $ADB_PORT..."
+    sleep 2
+    adb connect "localhost:$ADB_PORT"
+    adb devices | grep -q "device$" \
+      && echo "  Connected on localhost:$ADB_PORT" \
+      || echo "  WARNING: Could not reconnect. Try: adb connect localhost:$ADB_PORT"
+    echo ""
+    echo "Done! ADB active on port $ADB_PORT."
+    echo "To connect from another machine: adb connect <phone-ip>:$ADB_PORT"
+    echo "Run 'adbtool tunnel up' to open CF tunnel."
     ;;
 
   port)

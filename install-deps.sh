@@ -72,5 +72,15 @@ if ! grep -q "zsh/site-functions" ~/.zshrc 2>/dev/null; then
 fi
 
 echo ""
+echo "Installing agent skill..."
+SKILLS_DIR="$HOME/.agents/skills"
+if [ -d "$SKILLS_DIR" ]; then
+  ln -sfn "$TOOLKIT_DIR/skills/phone-automation" "$SKILLS_DIR/phone-automation"
+  echo "  linked: phone-automation → $SKILLS_DIR/"
+else
+  echo "  skipped: ~/.agents/skills/ not found (not a controlling machine)"
+fi
+
+echo ""
 echo "Done. Restart Termux or run: source ~/.zshrc"
 echo "Then try: adbtool <TAB>"

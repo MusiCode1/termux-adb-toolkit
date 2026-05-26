@@ -1,5 +1,42 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-05-26 12:45
+
+### v1.3 — agent skill, תיקון ADB reconnect, תיעוד אוטומציה
+
+#### מה בוצע?
+
+**1. Agent skill — `phone-automation`**
+
+- נוצרה תיקייה `skills/phone-automation/SKILL.md`
+- מסביר לסוכנים איך להתחבר לטלפון (SSH tunnel + ADB), להשתמש ב-adbtool, Appium MCP, phone-session-guard, והזנת עברית
+- `install-deps.sh` מוסיף symlink אוטומטי ל-`~/.agents/skills/` אם הספרייה קיימת (מכונות שליטה)
+
+**2. תיקון `adbtool start` — reconnect אוטומטי**
+
+- לאחר `stop adbd; start adbd`, חיבור ה-TLS נופל — הפורט TCP פתוח אבל אין חיבור
+- נוסף שלב 5/5: ממתין 2 שניות ומריץ `adb connect localhost:$ADB_PORT` אוטומטית
+- הפורט נלקח מ-`$ADB_PORT` (משתנה, לא קשיח)
+- מסר סיום מציין שיש להתחבר גם מהמחשב המקומי
+
+**3. עדכון `adbtool-start.sh` (widget)**
+
+- נוסף toast שני עם הפורט הפעיל והנחיה להתחבר גם מהמחשב המקומי
+- הפורט נקרא דינמית מ-`persist.adb.tcp.port`
+
+**4. עדכון `AGENTS.md`**
+
+- נוסף סקשן ראשי המפנה לסקיל `phone-automation`
+- מציין שם הקובץ ואיך הוא מותקן
+
+#### החלטות ארכיטקטורה
+
+- **symlink מ-install-deps.sh**: הסקיל חי בתוך הפרויקט; `install-deps.sh` יוצר symlink רק אם `~/.agents/skills/` קיים — כך הסקריפט עובד גם על הטלפון (מדלג) וגם על מכונת שליטה (מקשר)
+
+#### מעקפים ופתרונות
+
+- **adbd restart מוחק TLS connection**: אחרי שינוי הפורט ל-TCP, ה-adbd עולה מחדש ו-TLS נופל. הפתרון: `sleep 2` ואז reconnect על הפורט החדש
+
 ## 2026-05-26 17:30
 
 ### v1.2 — widget shortcuts, Termux:Boot, תיקוני CF tunnel
