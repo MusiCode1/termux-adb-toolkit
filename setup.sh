@@ -93,7 +93,7 @@ echo "[ 2/6 ] Installing Oh My Zsh..."
 if [ -d "$HOME/.oh-my-zsh" ]; then
   echo "  Already installed — skipping."
 else
-  RUNZSH=no CHSH=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+  RUNZSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
 # ─── Plugins & Theme ──────────────────────────────────────────────────────────
