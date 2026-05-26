@@ -75,19 +75,28 @@ if [ -n "$CF_TUNNEL_NAME" ]; then
   fi
   echo ""
 
-  # Create tunnel (or recreate if credentials missing)
+  # Create tunnel or get token for existing one
+  TUNNEL_EXISTS=$(cloudflared tunnel list 2>/dev/null | grep -c "$CF_TUNNEL_NAME" || true)
   TUNNEL_ID=$(cloudflared tunnel list 2>/dev/null | grep "$CF_TUNNEL_NAME" | awk '{print $1}')
   CREDS_FILE="$HOME/.cloudflared/${TUNNEL_ID}.json"
 
-  if [ -z "$TUNNEL_ID" ]; then
+  if [ "$TUNNEL_EXISTS" = "0" ]; then
     echo "Creating tunnel: $CF_TUNNEL_NAME..."
     cloudflared tunnel create "$CF_TUNNEL_NAME"
+    TUNNEL_ID=$(cloudflared tunnel list 2>/dev/null | grep "$CF_TUNNEL_NAME" | awk '{print $1}')
+    CREDS_FILE="$HOME/.cloudflared/${TUNNEL_ID}.json"
   elif [ ! -f "$CREDS_FILE" ]; then
-    echo "Tunnel exists but credentials missing — recreating..."
-    cloudflared tunnel delete "$CF_TUNNEL_NAME" --force 2>/dev/null || true
-    cloudflared tunnel create "$CF_TUNNEL_NAME"
+    echo "Tunnel exists — fetching token..."
+    CF_TUNNEL_TOKEN=$(cloudflared tunnel token "$CF_TUNNEL_NAME" 2>/dev/null)
+    if [ -n "$CF_TUNNEL_TOKEN" ]; then
+      mkdir -p "$HOME/.cloudflared"
+      echo "$CF_TUNNEL_TOKEN" > "$HOME/.cloudflared/tunnel-token"
+      echo "  Token saved to ~/.cloudflared/tunnel-token"
+    else
+      echo "  WARNING: Could not fetch token. Service may not start."
+    fi
   else
-    echo "Tunnel '$CF_TUNNEL_NAME' ready."
+    echo "Tunnel '$CF_TUNNEL_NAME' ready (credentials found)."
   fi
   echo ""
 fi
@@ -165,10 +174,17 @@ ln -sf "$PREFIX/share/termux-services/sshd" "$PREFIX/var/service/sshd" 2>/dev/nu
 # cloudflared service (if tunnel configured)
 if [ -n "$CF_TUNNEL_NAME" ]; then
   mkdir -p "$PREFIX/share/termux-services/cloudflared/log"
-  cat > "$PREFIX/share/termux-services/cloudflared/run" << SVCEOF
+  if [ -f "$HOME/.cloudflared/tunnel-token" ]; then
+    cat > "$PREFIX/share/termux-services/cloudflared/run" << 'SVCEOF'
+#!/data/data/com.termux/files/usr/bin/sh
+exec cloudflared tunnel run --token "$(cat /data/data/com.termux/files/home/.cloudflared/tunnel-token)" 2>&1
+SVCEOF
+  else
+    cat > "$PREFIX/share/termux-services/cloudflared/run" << SVCEOF
 #!/data/data/com.termux/files/usr/bin/sh
 exec cloudflared tunnel run $CF_TUNNEL_NAME 2>&1
 SVCEOF
+  fi
   chmod +x "$PREFIX/share/termux-services/cloudflared/run"
   touch "$PREFIX/share/termux-services/cloudflared/down"
   ln -sf "$PREFIX/share/termux-services/cloudflared" "$PREFIX/var/service/cloudflared" 2>/dev/null || true
