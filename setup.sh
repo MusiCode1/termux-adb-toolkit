@@ -75,15 +75,21 @@ if [ -n "$CF_TUNNEL_NAME" ]; then
   fi
   echo ""
 
-  # Create tunnel if it doesn't exist yet
-  if ! cloudflared tunnel list 2>/dev/null | grep -q "$CF_TUNNEL_NAME"; then
+  # Create tunnel (or recreate if credentials missing)
+  TUNNEL_ID=$(cloudflared tunnel list 2>/dev/null | grep "$CF_TUNNEL_NAME" | awk '{print $1}')
+  CREDS_FILE="$HOME/.cloudflared/${TUNNEL_ID}.json"
+
+  if [ -z "$TUNNEL_ID" ]; then
     echo "Creating tunnel: $CF_TUNNEL_NAME..."
     cloudflared tunnel create "$CF_TUNNEL_NAME"
-    echo ""
+  elif [ ! -f "$CREDS_FILE" ]; then
+    echo "Tunnel exists but credentials missing — recreating..."
+    cloudflared tunnel delete "$CF_TUNNEL_NAME" --force 2>/dev/null || true
+    cloudflared tunnel create "$CF_TUNNEL_NAME"
   else
-    echo "Tunnel '$CF_TUNNEL_NAME' already exists — skipping creation."
-    echo ""
+    echo "Tunnel '$CF_TUNNEL_NAME' ready."
   fi
+  echo ""
 fi
 
 # ─── Oh My Zsh ────────────────────────────────────────────────────────────────
