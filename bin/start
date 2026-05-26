@@ -1,0 +1,68 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# start — bootstrap ADB + Shizuku + stable port
+#
+# Prerequisites:
+#   - WiFi connected
+#   - Wireless Debugging enabled in Developer Options
+#   - This device was previously paired with itself via adb pair
+
+set -e
+
+echo "[ 1/4 ] Checking Wireless Debugging..."
+PORT=$(getprop service.adb.tls.port 2>/dev/null)
+
+if [ -z "$PORT" ] || [ "$PORT" = "0" ]; then
+  # Try mDNS fallback
+  if command -v mdns-scan >/dev/null 2>&1; then
+    PORT=$(timeout 4 mdns-scan 2>/dev/null \
+      | grep "_adb-tls-connect" \
+      | grep -o '[0-9]*$' | head -1)
+  fi
+fi
+
+if [ -z "$PORT" ] || [ "$PORT" = "0" ]; then
+  echo ""
+  echo "ERROR: Wireless Debugging is not active."
+  echo "  Settings → Developer Options → Wireless Debugging → ON"
+  exit 1
+fi
+
+echo "  Found TLS port: $PORT"
+
+echo ""
+echo "[ 2/4 ] Connecting ADB..."
+adb connect "localhost:$PORT"
+sleep 1
+
+if ! adb devices | grep -q "device$"; then
+  echo "ERROR: ADB connection failed. Did you approve this device?"
+  exit 1
+fi
+
+echo "  ADB connected."
+
+echo ""
+echo "[ 3/4 ] Starting Shizuku..."
+SHIZUKU_LIB=$(adb shell find /data/app -name "libshizuku.so" 2>/dev/null | tr -d '\r' | head -1)
+if [ -z "$SHIZUKU_LIB" ]; then
+  echo "  WARNING: Shizuku not installed — skipping."
+else
+  adb shell "$SHIZUKU_LIB" 2>/dev/null | tail -2
+fi
+
+echo ""
+echo "[ 4/4 ] Setting stable TCP port (5588)..."
+RISH_APPLICATION_ID=com.termux rish -c "
+  setprop service.adb.tcp.port 5588
+  setprop persist.adb.tcp.port 5588
+  setprop persist.adb.tls_server.enable 0
+  stop adbd
+  sleep 1
+  start adbd
+" && echo "  Stable port 5588 set." || echo "  WARNING: Could not set stable port (Shizuku not running?)."
+
+echo ""
+echo "Done!"
+echo "  ADB TCP port : 5588 (stable, no WiFi required next time)"
+echo "  Shizuku      : running"
+echo "  Tunnel       : run 'tunnel up' to open CF tunnel"
