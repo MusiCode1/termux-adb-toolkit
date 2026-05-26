@@ -1,0 +1,28 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# adb-fix-port — enable ADB over TCP on a stable port via Shizuku
+# Default port: 5588. Override with: adb-fix-port 1234
+#
+# Requirements: Shizuku running + rish installed
+# After running: adb connect <device-ip>:PORT (no TLS pairing needed)
+
+PORT="${1:-5588}"
+
+if ! command -v rish >/dev/null 2>&1; then
+  echo "rish not found. Install it from the Shizuku app." >&2
+  exit 1
+fi
+
+echo "Setting ADB TCP port to $PORT via Shizuku..."
+
+RISH_APPLICATION_ID=com.termux rish -c "
+  setprop service.adb.tcp.port $PORT
+  setprop persist.adb.tcp.port $PORT
+  setprop persist.adb.tls_server.enable 0
+  echo 'Properties set. Restarting adbd...'
+  stop adbd
+  sleep 1
+  start adbd
+  sleep 1
+  echo 'Done. ADB listening on port $PORT'
+  echo 'From remote machine: adb connect <DEVICE_IP>:$PORT'
+"

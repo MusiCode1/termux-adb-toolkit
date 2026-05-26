@@ -1,0 +1,28 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# shizuku — start or check Shizuku server
+# Usage: shizuku [start|status]
+
+ACTION="${1:-status}"
+
+SHIZUKU_LIB=$(find /data/app -name "libshizuku.so" -path "*shizuku*" 2>/dev/null | head -1)
+
+case "$ACTION" in
+  start)
+    if [ -z "$SHIZUKU_LIB" ]; then
+      echo "Shizuku not installed." >&2
+      exit 1
+    fi
+    adb shell "$SHIZUKU_LIB"
+    ;;
+  status)
+    if rish -c "echo ok" >/dev/null 2>&1; then
+      echo "Shizuku: running"
+    else
+      echo "Shizuku: not running (use: shizuku start)"
+    fi
+    ;;
+  *)
+    echo "Usage: shizuku [start|status]"
+    exit 1
+    ;;
+esac

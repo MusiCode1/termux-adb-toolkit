@@ -1,0 +1,24 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# tunnel — start/stop/status Cloudflare tunnel
+# Usage: tunnel [up|down|status]
+
+ACTION="${1:-status}"
+
+case "$ACTION" in
+  up)
+    sv up cloudflared
+    sleep 1
+    sv status cloudflared
+    ;;
+  down)
+    sv down cloudflared
+    sv status cloudflared
+    ;;
+  status)
+    sv status cloudflared
+    ;;
+  *)
+    echo "Usage: tunnel [up|down|status]"
+    exit 1
+    ;;
+esac

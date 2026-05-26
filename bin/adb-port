@@ -1,0 +1,52 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# adb-port — discover current ADB wireless debugging port
+# Usage: adb-port [--tls|--tcp]
+#   --tls  (default) Wireless Debugging TLS port
+#   --tcp            Classic adb-over-tcp port (persist.adb.tcp.port)
+
+MODE="tls"
+[ "$1" = "--tcp" ] && MODE="tcp"
+
+if [ "$MODE" = "tcp" ]; then
+  PORT=$(getprop persist.adb.tcp.port 2>/dev/null)
+  [ -z "$PORT" ] || [ "$PORT" = "0" ] && PORT=$(getprop service.adb.tcp.port 2>/dev/null)
+  [ -z "$PORT" ] || [ "$PORT" = "0" ] && PORT=$(getprop service.adb.tcp.port 2>/dev/null)
+  if [ -z "$PORT" ] || [ "$PORT" = "0" ] || [ "$PORT" = "-1" ]; then
+    echo "ADB TCP not enabled. Run adb-fix-port first." >&2
+    exit 1
+  fi
+  echo "$PORT"
+  exit 0
+fi
+
+# TLS mode — try getprop first
+PORT=$(getprop service.adb.tls.port 2>/dev/null)
+if [ -n "$PORT" ] && [ "$PORT" != "0" ]; then
+  echo "$PORT"
+  exit 0
+fi
+
+# Fallback: scan mDNS for _adb-tls-connect._tcp.local
+if ! command -v mdns-scan >/dev/null 2>&1; then
+  echo "mdns-scan not installed. Run: pkg install mdns-scan" >&2
+  exit 1
+fi
+
+SERVICE=$(timeout 4 mdns-scan 2>/dev/null | grep "_adb-tls-connect" | head -1)
+if [ -z "$SERVICE" ]; then
+  echo "ADB TLS service not found via mDNS." >&2
+  exit 1
+fi
+
+# Extract port from service name suffix (e.g. adb-SERIAL-TOKEN._adb-tls-connect._tcp.local)
+# Port is in the SRV record — resolve via ss as fallback
+PORT=$(ss -tlnp 2>/dev/null | awk '/LISTEN/{print $4}' | grep -v '127\.' | grep -o ':[0-9]*$' | tr -d ':' | sort -n | while read p; do
+  [ "$p" -gt 1024 ] && [ "$p" -ne 8022 ] && [ "$p" -ne 5037 ] && echo "$p"
+done | head -1)
+
+if [ -z "$PORT" ]; then
+  echo "Could not resolve ADB TLS port." >&2
+  exit 1
+fi
+
+echo "$PORT"
