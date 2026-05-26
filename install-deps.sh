@@ -15,7 +15,10 @@ pkg install -y \
 
 echo ""
 echo "Installing rish from Shizuku APK..."
-SHIZUKU_APK=$(find /data/app -name "base.apk" -path "*shizuku*" 2>/dev/null | head -1)
+SHIZUKU_APK=$(find /data/app -name "base.apk" 2>/dev/null | grep -i "shizuku\|moe.shizuku" | head -1)
+# fallback: search by package name directory
+[ -z "$SHIZUKU_APK" ] && SHIZUKU_APK=$(find /data/app -name "base.apk" 2>/dev/null | xargs -I{} sh -c 'echo "{}" | grep -q "moe.shizuku" && echo "{}"' 2>/dev/null | head -1)
+[ -z "$SHIZUKU_APK" ] && SHIZUKU_APK=$(find /data/app -path "*/moe.shizuku*" -name "base.apk" 2>/dev/null | head -1)
 
 if [ -z "$SHIZUKU_APK" ]; then
   echo "  WARNING: Shizuku APK not found. Install Shizuku first, then re-run this script."
