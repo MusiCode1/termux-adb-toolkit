@@ -4,6 +4,11 @@
 
 SVDIR="${SVDIR:-/data/data/com.termux/files/usr/var/service}"
 
+# Load config
+TOOLKIT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+[ -f "$TOOLKIT_DIR/config.env" ] && . "$TOOLKIT_DIR/config.env"
+ADB_PORT="${ADB_PORT:-5588}"
+
 _usage() {
   cat << 'EOF'
 adbtool — Termux ADB toolkit
@@ -49,13 +54,13 @@ case "$CMD" in
     echo ""
     echo "[ 4/4 ] Setting stable port (5588)..."
     RISH_APPLICATION_ID=com.termux rish -c "
-      setprop service.adb.tcp.port 5588
-      setprop persist.adb.tcp.port 5588
+      setprop service.adb.tcp.port $ADB_PORT
+      setprop persist.adb.tcp.port $ADB_PORT
       setprop persist.adb.tls_server.enable 0
       stop adbd; sleep 1; start adbd
-    " && echo "  Port 5588 set." || echo "  WARNING: Could not set port (Shizuku running?)."
+    " && echo "  Port $ADB_PORT set." || echo "  WARNING: Could not set stable port (Shizuku running?)."
     echo ""
-    echo "Done! TCP port 5588 active. Run 'adbtool tunnel up' to open CF tunnel."
+    echo "Done! TCP port $ADB_PORT active. Run 'adbtool tunnel up' to open CF tunnel."
     ;;
 
   port)
@@ -80,7 +85,7 @@ case "$CMD" in
     ;;
 
   fix-port)
-    PORT="${1:-5588}"
+    PORT="${1:-$ADB_PORT}"
     command -v rish >/dev/null 2>&1 || { echo "rish not found." >&2; exit 1; }
     echo "Setting ADB TCP port to $PORT..."
     RISH_APPLICATION_ID=com.termux rish -c "
