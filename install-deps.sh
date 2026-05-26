@@ -15,20 +15,23 @@ pkg install -y \
 
 echo ""
 echo "Installing rish from Shizuku APK..."
-SHIZUKU_APK=$(adb shell find /data/app -name "base.apk" 2>/dev/null | grep -i "shizuku\|moe.shizuku" | tr -d '\r' | head -1)
-
-if [ -z "$SHIZUKU_APK" ]; then
-  echo "  WARNING: Shizuku APK not found. Install Shizuku first, then re-run this script."
+if [ -f "$PREFIX/bin/rish" ] && [ -f "$PREFIX/share/shizuku/rish_shizuku.dex" ]; then
+  echo "  rish already installed — skipping."
 else
-  mkdir -p "$PREFIX/share/shizuku"
-  adb pull "$SHIZUKU_APK" "$TMPDIR/shizuku.apk"
-  unzip -p "$TMPDIR/shizuku.apk" assets/rish > "$PREFIX/bin/rish"
-  unzip -p "$TMPDIR/shizuku.apk" assets/rish_shizuku.dex > "$PREFIX/share/shizuku/rish_shizuku.dex"
-  chmod 400 "$PREFIX/share/shizuku/rish_shizuku.dex"
-  chmod +x "$PREFIX/bin/rish"
-  # Point rish to the correct DEX location
-  sed -i "s|BASEDIR=\$(dirname \"\$0\")|BASEDIR=$PREFIX/share/shizuku|" "$PREFIX/bin/rish"
-  echo "  rish installed."
+  SHIZUKU_APK=$(adb shell find /data/app -name "base.apk" 2>/dev/null | grep -i "shizuku\|moe.shizuku" | tr -d '\r' | head -1)
+  if [ -z "$SHIZUKU_APK" ]; then
+    echo "  WARNING: rish not found and ADB not connected."
+    echo "  Connect ADB (Wireless Debugging) and re-run, or install rish manually."
+  else
+    mkdir -p "$PREFIX/share/shizuku"
+    adb pull "$SHIZUKU_APK" "$TMPDIR/shizuku.apk"
+    unzip -p "$TMPDIR/shizuku.apk" assets/rish > "$PREFIX/bin/rish"
+    unzip -p "$TMPDIR/shizuku.apk" assets/rish_shizuku.dex > "$PREFIX/share/shizuku/rish_shizuku.dex"
+    chmod 400 "$PREFIX/share/shizuku/rish_shizuku.dex"
+    chmod +x "$PREFIX/bin/rish"
+    sed -i "s|BASEDIR=\$(dirname \"\$0\")|BASEDIR=$PREFIX/share/shizuku|" "$PREFIX/bin/rish"
+    echo "  rish installed."
+  fi
 fi
 
 echo ""
