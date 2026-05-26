@@ -3,19 +3,20 @@
 # Usage: tunnel [up|down|status]
 
 ACTION="${1:-status}"
+SVC="${SVDIR:-/data/data/com.termux/files/usr/var/service}/cloudflared"
 
 case "$ACTION" in
   up)
-    sv up cloudflared
+    sv up "$SVC"
     sleep 1
-    sv status cloudflared
+    sv status "$SVC"
     ;;
   down)
-    sv down cloudflared
-    sv status cloudflared
+    sv down "$SVC"
+    sv status "$SVC"
     ;;
   status)
-    sv status cloudflared
+    sv status "$SVC"
     ;;
   *)
     echo "Usage: tunnel [up|down|status]"
