@@ -8,6 +8,7 @@ A collection of scripts for managing Android devices via ADB from Termux.
 - [Shizuku](https://shizuku.rikka.app/) installed and running
 - Developer Options → Wireless Debugging enabled (for initial setup)
 - Developer Options → Disable permission monitoring → **ON**
+- `git` — installed via `pkg install git` (required for cloning this repo)
 
 ## Quick Start
 

@@ -9,6 +9,7 @@ echo "Installing dependencies..."
 pkg install -y \
   android-tools \
   cloudflared \
+  git \
   mdns-scan \
   openssh \
   termux-services
