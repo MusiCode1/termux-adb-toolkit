@@ -52,6 +52,35 @@ echo ""
 echo "Saved to config.env."
 echo ""
 
+# ─── Cloudflare login ─────────────────────────────────────────────────────────
+
+if [ -n "$CF_TUNNEL_NAME" ]; then
+  if [ -f "$HOME/.cloudflared/cert.pem" ]; then
+    echo "Cloudflare: already logged in — skipping."
+  else
+    echo "┌─────────────────────────────────────────────┐"
+    echo "│  Cloudflare login required                  │"
+    echo "│  A browser URL will appear — open it and    │"
+    echo "│  authorize your Cloudflare account.         │"
+    echo "└─────────────────────────────────────────────┘"
+    echo ""
+    cloudflared tunnel login
+    echo ""
+    echo "Logged in."
+  fi
+  echo ""
+
+  # Create tunnel if it doesn't exist yet
+  if ! cloudflared tunnel list 2>/dev/null | grep -q "$CF_TUNNEL_NAME"; then
+    echo "Creating tunnel: $CF_TUNNEL_NAME..."
+    cloudflared tunnel create "$CF_TUNNEL_NAME"
+    echo ""
+  else
+    echo "Tunnel '$CF_TUNNEL_NAME' already exists — skipping creation."
+    echo ""
+  fi
+fi
+
 # ─── Packages ─────────────────────────────────────────────────────────────────
 
 echo "[ 1/6 ] Installing packages..."

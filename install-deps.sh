@@ -53,12 +53,13 @@ echo "  zsh:  $PREFIX/share/zsh/site-functions/_adbtool"
 echo ""
 echo "Setting RISH_APPLICATION_ID in ~/.zshrc..."
 if ! grep -q "RISH_APPLICATION_ID" ~/.zshrc 2>/dev/null; then
-  echo "\nexport RISH_APPLICATION_ID=com.termux" >> ~/.zshrc
+  printf '\nexport RISH_APPLICATION_ID=com.termux\n' >> ~/.zshrc
 fi
 
 # Enable zsh completions path if not already set
 if ! grep -q "zsh/site-functions" ~/.zshrc 2>/dev/null; then
-  echo "\nfpath=($PREFIX/share/zsh/site-functions \$fpath)\nautoload -Uz compinit && compinit" >> ~/.zshrc
+  printf '\nfpath=(%s $fpath)\nautoload -Uz compinit && compinit\n' \
+    "$PREFIX/share/zsh/site-functions" >> ~/.zshrc
 fi
 
 echo ""
