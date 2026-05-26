@@ -42,6 +42,15 @@ ln -sf "$TOOLKIT_DIR/bin/adbtool" "$PREFIX/bin/adbtool"
 echo "  linked: adbtool"
 
 echo ""
+echo "Installing widget shortcuts..."
+mkdir -p "$HOME/.shortcuts"
+for f in "$TOOLKIT_DIR/shortcuts/"*.sh; do
+  cp "$f" "$HOME/.shortcuts/$(basename $f)"
+  chmod +x "$HOME/.shortcuts/$(basename $f)"
+  echo "  shortcut: $(basename $f)"
+done
+
+echo ""
 echo "Installing completions..."
 mkdir -p "$PREFIX/share/bash-completion/completions"
 mkdir -p "$PREFIX/share/zsh/site-functions"
