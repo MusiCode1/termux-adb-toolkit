@@ -1,5 +1,37 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-05-26 15:30
+
+### v1.1 — אשף הגדרות, config.env, תיקוני באגים
+
+#### מה בוצע?
+
+**1. אשף אינטראקטיבי ב-setup.sh**
+
+- בתחילת ההרצה: שואל ADB_PORT, CF_TUNNEL_NAME, CF_HOSTNAME
+- שומר ל-`config.env` (מוחרג מ-git)
+- `config.env.example` נוסף לריפו כדוגמה
+
+**2. Cloudflare login בסקריפט**
+
+- אם הוגדר CF_TUNNEL_NAME: `cloudflared tunnel login` רץ אוטומטית לפני ההתקנה
+- אם המנהרה לא קיימת: `cloudflared tunnel create <name>` רץ אוטומטית
+- אם כבר מחובר (cert.pem קיים): דילוג
+
+**3. adbtool קורא config.env**
+
+- ADB_PORT נלקח מ-config.env במקום hardcoded 5588
+- TOOLKIT_DIR מחושב יחסית לנתיב הסקריפט
+
+**4. תיקון `echo "\n"` בבאש**
+
+- `echo "\n"` בבאש כותב `\n` ממש → גרם ל-`nfpath=` ב-zshrc של zsh
+- תוקן ל-`printf '\n...\n'`
+
+#### מעקפים ופתרונות
+
+- **`echo "\n"` בבאש**: בניגוד לזאש, בבאש `\n` לא מתפרש כשורה חדשה. להשתמש תמיד ב-`printf '\n'` בסקריפטי bash שכותבים לקבצי zsh
+
 ## 2026-05-26 12:45
 
 ### v1.0 — יצירת הפרויקט והכלים הבסיסיים
