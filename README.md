@@ -18,7 +18,7 @@ pkg upgrade -y
 # Restart Termux
 
 # 2. Clone and run
-git clone https://github.com/aybritman/termux-adb-toolkit
+git clone https://github.com/MusiCode1/termux-adb-toolkit
 cd termux-adb-toolkit
 chmod +x setup.sh && ./setup.sh
 ```
