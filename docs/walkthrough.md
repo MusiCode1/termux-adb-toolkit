@@ -1,5 +1,44 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-05-26 17:30
+
+### v1.2 — widget shortcuts, Termux:Boot, תיקוני CF tunnel
+
+#### מה בוצע?
+
+**1. Widget shortcuts**
+
+- `shortcuts/tunnel-status.sh` — מציג toast עם סטטוס מנהרה/SSH/ADB
+- `shortcuts/tunnel-up.sh` / `tunnel-down.sh` — הפעלה/עצירת מנהרה
+- `shortcuts/adbtool-start.sh` — bootstrap ADB + Shizuku
+- `install-deps.sh` מתקין shortcuts ל-`~/.shortcuts/` אוטומטית
+
+**2. Termux:Boot**
+
+- `~/.termux/boot/start-services.sh` — מפעיל sshd בהפעלת מכשיר
+- `termux-api` package נוסף לתלויות (`termux-toast`)
+
+**3. תיקוני CF tunnel**
+
+- מנהרה קיימת ללא credentials → fetch token דרך `cloudflared tunnel token`
+- service script מזהה אם יש `tunnel-token` ומשתמש ב-`--token` flag
+- cloudflared עבר לתוך `pkg install` (היה אחרי התקנה)
+- `cloudflared tunnel login` מופעל אחרי התקנת חבילות
+
+**4. תיקון OMZ**
+
+- הוסר `CHSH=yes` — OMZ שואל את המשתמש כרגיל (יש ממילא מעורבות אינטראקטיבית)
+
+#### החלטות ארכיטקטורה
+
+- **toast מתחיל במילה עברית**: `printf '\xe2\x80\x8f'` לא עובד ב-sh של Termux. פתרון: להתחיל עם מילה עברית כדי ש-BiDi יכוון ימין אוטומטית
+- **token במקום delete+recreate**: `cloudflared tunnel token <name>` עובד עם `cert.pem` בלבד — לא צריך למחוק מנהרה קיימת
+
+#### מעקפים ופתרונות
+
+- **`printf '\xe2\x80\x8f'` מדפיס טקסט מילולי בטרמוקס sh**: להתחיל הודעה במילה עברית במקום
+- **`cloudflared tunnel delete` נכשל**: ה-API של CF דוחה מחיקה אם המנהרה עדיין "קיימת" בעיניו → שימוש ב-token של מנהרה קיימת
+
 ## 2026-05-26 15:30
 
 ### v1.1 — אשף הגדרות, config.env, תיקוני באגים
