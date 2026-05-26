@@ -1,0 +1,134 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# adbtool — Termux ADB toolkit
+# Usage: adbtool <command> [args]
+
+SVDIR="${SVDIR:-/data/data/com.termux/files/usr/var/service}"
+
+_usage() {
+  cat << 'EOF'
+adbtool — Termux ADB toolkit
+
+Usage:
+  adbtool start              Bootstrap: find port, connect ADB, start Shizuku, fix port
+  adbtool port [--tcp]       Show current ADB port (TLS or TCP)
+  adbtool fix-port [PORT]    Set stable TCP port via Shizuku (default: 5588)
+  adbtool tunnel <cmd>       Manage Cloudflare tunnel (up|down|status)
+  adbtool shizuku <cmd>      Manage Shizuku (start|status)
+  adbtool help               Show this help
+EOF
+}
+
+CMD="$1"
+shift 2>/dev/null
+
+case "$CMD" in
+
+  start)
+    echo "[ 1/4 ] Checking Wireless Debugging..."
+    PORT=$(getprop service.adb.tls.port 2>/dev/null)
+    if [ -z "$PORT" ] || [ "$PORT" = "0" ]; then
+      command -v mdns-scan >/dev/null 2>&1 && \
+        PORT=$(timeout 4 mdns-scan 2>/dev/null | grep "_adb-tls-connect" | grep -o '[0-9]*$' | head -1)
+    fi
+    if [ -z "$PORT" ] || [ "$PORT" = "0" ]; then
+      echo "ERROR: Wireless Debugging is not active."
+      echo "  Settings → Developer Options → Wireless Debugging → ON"
+      exit 1
+    fi
+    echo "  TLS port: $PORT"
+    echo ""
+    echo "[ 2/4 ] Connecting ADB..."
+    adb connect "localhost:$PORT"
+    sleep 1
+    adb devices | grep -q "device$" || { echo "ERROR: ADB connection failed."; exit 1; }
+    echo "  Connected."
+    echo ""
+    echo "[ 3/4 ] Starting Shizuku..."
+    SHIZUKU_LIB=$(adb shell find /data/app -name "libshizuku.so" 2>/dev/null | tr -d '\r' | head -1)
+    [ -n "$SHIZUKU_LIB" ] && adb shell "$SHIZUKU_LIB" 2>/dev/null | tail -2 || echo "  Shizuku not installed — skipping."
+    echo ""
+    echo "[ 4/4 ] Setting stable port (5588)..."
+    RISH_APPLICATION_ID=com.termux rish -c "
+      setprop service.adb.tcp.port 5588
+      setprop persist.adb.tcp.port 5588
+      setprop persist.adb.tls_server.enable 0
+      stop adbd; sleep 1; start adbd
+    " && echo "  Port 5588 set." || echo "  WARNING: Could not set port (Shizuku running?)."
+    echo ""
+    echo "Done! TCP port 5588 active. Run 'adbtool tunnel up' to open CF tunnel."
+    ;;
+
+  port)
+    MODE="${1:-tls}"
+    [ "$1" = "--tcp" ] && MODE="tcp"
+    if [ "$MODE" = "tcp" ]; then
+      P=$(getprop persist.adb.tcp.port 2>/dev/null)
+      [ -z "$P" ] || [ "$P" = "0" ] || [ "$P" = "-1" ] && P=$(getprop service.adb.tcp.port 2>/dev/null)
+      [ -z "$P" ] || [ "$P" = "0" ] || [ "$P" = "-1" ] && { echo "ADB TCP not enabled. Run: adbtool fix-port" >&2; exit 1; }
+      echo "$P"
+    else
+      P=$(getprop service.adb.tls.port 2>/dev/null)
+      if [ -n "$P" ] && [ "$P" != "0" ]; then
+        echo "$P"
+      else
+        command -v mdns-scan >/dev/null 2>&1 || { echo "mdns-scan not installed." >&2; exit 1; }
+        S=$(timeout 4 mdns-scan 2>/dev/null | grep "_adb-tls-connect" | head -1)
+        [ -z "$S" ] && { echo "ADB TLS service not found. Is Wireless Debugging on?" >&2; exit 1; }
+        echo "$S" | grep -o '[0-9]*$'
+      fi
+    fi
+    ;;
+
+  fix-port)
+    PORT="${1:-5588}"
+    command -v rish >/dev/null 2>&1 || { echo "rish not found." >&2; exit 1; }
+    echo "Setting ADB TCP port to $PORT..."
+    RISH_APPLICATION_ID=com.termux rish -c "
+      setprop service.adb.tcp.port $PORT
+      setprop persist.adb.tcp.port $PORT
+      setprop persist.adb.tls_server.enable 0
+      stop adbd; sleep 1; start adbd
+      echo 'Done. Connect: adb connect <IP>:$PORT'
+    "
+    ;;
+
+  tunnel)
+    SUB="${1:-status}"
+    SVC="$SVDIR/cloudflared"
+    case "$SUB" in
+      up)     sv up "$SVC"; sleep 1; sv status "$SVC" ;;
+      down)   sv down "$SVC"; sv status "$SVC" ;;
+      status) sv status "$SVC" ;;
+      *) echo "Usage: adbtool tunnel up|down|status"; exit 1 ;;
+    esac
+    ;;
+
+  shizuku)
+    SUB="${1:-status}"
+    case "$SUB" in
+      start)
+        SHIZUKU_LIB=$(adb shell find /data/app -name "libshizuku.so" 2>/dev/null | tr -d '\r' | head -1)
+        [ -z "$SHIZUKU_LIB" ] && { echo "Shizuku not installed." >&2; exit 1; }
+        adb shell "$SHIZUKU_LIB"
+        ;;
+      status)
+        RISH_APPLICATION_ID=com.termux rish -c "echo ok" >/dev/null 2>&1 \
+          && echo "Shizuku: running" \
+          || echo "Shizuku: not running (run: adbtool shizuku start)"
+        ;;
+      *) echo "Usage: adbtool shizuku start|status"; exit 1 ;;
+    esac
+    ;;
+
+  help|"")
+    _usage
+    ;;
+
+  *)
+    echo "Unknown command: $CMD"
+    echo ""
+    _usage
+    exit 1
+    ;;
+
+esac

@@ -35,13 +35,20 @@ else
 fi
 
 echo ""
-echo "Installing toolkit scripts..."
+echo "Installing adbtool..."
 TOOLKIT_DIR="$(cd "$(dirname "$0")" && pwd)"
-chmod +x "$TOOLKIT_DIR"/bin/*
-for f in "$TOOLKIT_DIR"/bin/*; do
-  ln -sf "$f" "$PREFIX/bin/$(basename $f)"
-  echo "  linked: $(basename $f)"
-done
+chmod +x "$TOOLKIT_DIR/bin/adbtool"
+ln -sf "$TOOLKIT_DIR/bin/adbtool" "$PREFIX/bin/adbtool"
+echo "  linked: adbtool"
+
+echo ""
+echo "Installing completions..."
+mkdir -p "$PREFIX/share/bash-completion/completions"
+mkdir -p "$PREFIX/share/zsh/site-functions"
+cp "$TOOLKIT_DIR/completions/adbtool.bash" "$PREFIX/share/bash-completion/completions/adbtool"
+cp "$TOOLKIT_DIR/completions/_adbtool"     "$PREFIX/share/zsh/site-functions/_adbtool"
+echo "  bash: $PREFIX/share/bash-completion/completions/adbtool"
+echo "  zsh:  $PREFIX/share/zsh/site-functions/_adbtool"
 
 echo ""
 echo "Setting RISH_APPLICATION_ID in ~/.zshrc..."
@@ -49,5 +56,11 @@ if ! grep -q "RISH_APPLICATION_ID" ~/.zshrc 2>/dev/null; then
   echo "\nexport RISH_APPLICATION_ID=com.termux" >> ~/.zshrc
 fi
 
+# Enable zsh completions path if not already set
+if ! grep -q "zsh/site-functions" ~/.zshrc 2>/dev/null; then
+  echo "\nfpath=($PREFIX/share/zsh/site-functions \$fpath)\nautoload -Uz compinit && compinit" >> ~/.zshrc
+fi
+
 echo ""
 echo "Done. Restart Termux or run: source ~/.zshrc"
+echo "Then try: adbtool <TAB>"

@@ -1,0 +1,46 @@
+#compdef adbtool
+# adbtool zsh completion
+# Place in a directory on $fpath (e.g. $PREFIX/share/zsh/site-functions/_adbtool)
+
+_adbtool() {
+  local state
+
+  _arguments \
+    '1: :->command' \
+    '*: :->args'
+
+  case $state in
+    command)
+      local commands=(
+        'start:Bootstrap ADB, Shizuku and stable port'
+        'port:Show current ADB port'
+        'fix-port:Set stable TCP port via Shizuku'
+        'tunnel:Manage Cloudflare tunnel'
+        'shizuku:Manage Shizuku'
+        'help:Show help'
+      )
+      _describe 'command' commands
+      ;;
+    args)
+      case ${words[2]} in
+        port)
+          local opts=('--tcp:Classic ADB TCP port' '--tls:Wireless Debugging TLS port (default)')
+          _describe 'option' opts
+          ;;
+        tunnel)
+          local subcmds=('up:Start tunnel' 'down:Stop tunnel' 'status:Show status')
+          _describe 'subcommand' subcmds
+          ;;
+        shizuku)
+          local subcmds=('start:Start Shizuku server' 'status:Check if running')
+          _describe 'subcommand' subcmds
+          ;;
+        fix-port)
+          _message 'port number (default: 5588)'
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_adbtool "$@"
