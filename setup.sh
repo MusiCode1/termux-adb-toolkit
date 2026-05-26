@@ -52,9 +52,15 @@ echo ""
 echo "Saved to config.env."
 echo ""
 
+# ─── Packages ─────────────────────────────────────────────────────────────────
+
+echo "[ 1/6 ] Installing packages..."
+pkg install -y nodejs zsh git curl fzf openssh termux-services cloudflared
+
 # ─── Cloudflare login ─────────────────────────────────────────────────────────
 
 if [ -n "$CF_TUNNEL_NAME" ]; then
+  echo ""
   if [ -f "$HOME/.cloudflared/cert.pem" ]; then
     echo "Cloudflare: already logged in — skipping."
   else
@@ -65,7 +71,6 @@ if [ -n "$CF_TUNNEL_NAME" ]; then
     echo "└─────────────────────────────────────────────┘"
     echo ""
     cloudflared tunnel login
-    echo ""
     echo "Logged in."
   fi
   echo ""
@@ -80,11 +85,6 @@ if [ -n "$CF_TUNNEL_NAME" ]; then
     echo ""
   fi
 fi
-
-# ─── Packages ─────────────────────────────────────────────────────────────────
-
-echo "[ 1/6 ] Installing packages..."
-pkg install -y nodejs zsh git curl fzf openssh termux-services
 
 # ─── Oh My Zsh ────────────────────────────────────────────────────────────────
 
