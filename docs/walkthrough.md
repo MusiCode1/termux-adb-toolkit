@@ -1,5 +1,27 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-09-10 00:22
+
+### v1.5 — adb-bootstrap: הדלקת wireless דרך Shizuku + חשיפה מינימלית
+
+#### מה בוצע?
+
+**`bin/adb-bootstrap` — זרימת bootstrap עם חשיפה מינימלית**
+
+- הבעיה: אחרי reboot פורט 5588 אובד, וה-bootstrap (mDNS → `adb tcpip`) דורש
+  Wireless Debugging דלוק — שדורש WiFi.
+- **מאומת:** Shizuku (uid 2000) יכול להדליק Wireless Debugging דרך
+  `settings put global adb_wifi_enabled 1` — **נדבק כשיש WiFi** (readback=1,
+  mDNS מפרסם פורט TLS, נצפה 32913). על סלולרי בלבד זה חוזר ל-0 (אין WiFi).
+- הזרימה: (1) WiFi כבוי? → Shizuku מדליק (`cmd wifi set-wifi-enabled`);
+  (2) מדליק wireless debugging (Shizuku, fallback ל-Tasker task
+  `EnableWirelessADB`); (3) mDNS → `adb tcpip 5588`; (4) **מכבה wireless
+  debugging** — יש tcp, חשיפה מינימלית.
+- **מאומת:** 5588 שורד את כיבוי ה-wireless (הפורט לא תלוי ב-WiFi ברגע שנפתח).
+
+**גוצ'ה:** בדיקת קצה-לקצה מלאה (מ-5588-כבוי) נדחתה כי `adb usb` הורג את
+Shizuku; כל השלבים אומתו בנפרד. מבחן-האמת: ה-reboot הבא.
+
 ## 2026-09-09 23:07
 
 ### v1.4 — החייאת adb-over-tcp דרך mDNS + פאנל UI

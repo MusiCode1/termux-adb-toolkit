@@ -1,0 +1,57 @@
+#!/data/data/com.termux/files/usr/bin/sh
+# adb-bootstrap — establish adb-over-tcp on a stable port with MINIMAL wireless
+# exposure. Flow: enable Wireless Debugging (Shizuku, or Tasker fallback) → mDNS
+# discover the TLS port → `adb tcpip PORT` → DISABLE Wireless Debugging again
+# (the tcp port survives; it does not need WiFi once open).
+#
+# Requires WiFi for the bootstrap itself (wireless debugging is WiFi-only).
+PORT="${1:-5588}"
+HELPER="$(dirname "$0")/adb-mdns-port.py"
+RISH="RISH_APPLICATION_ID=com.termux rish -c"
+adb start-server >/dev/null 2>&1
+
+if adb -s "localhost:$PORT" shell true >/dev/null 2>&1; then
+  echo "Already on localhost:$PORT"; exit 0
+fi
+
+sh_shizuku() { eval "$RISH \"$1\"" 2>/dev/null; }
+
+# --- ensure WiFi (wireless debugging is WiFi-only) ---
+if [ "$(sh_shizuku 'settings get global wifi_on' | tr -d '\r')" != "1" ]; then
+  echo "WiFi off — enabling via Shizuku..."; sh_shizuku "cmd wifi set-wifi-enabled enabled" >/dev/null; sleep 5
+fi
+
+# --- enable wireless debugging: try Shizuku, then Tasker ---
+enable_wireless() {
+  # 1) Shizuku (proven: settings put sticks when on WiFi)
+  if sh_shizuku "id -u" | grep -q 2000; then
+    sh_shizuku "settings put global adb_wifi_enabled 1" >/dev/null; return 0
+  fi
+  # 2) Tasker fallback — fire a user task named "EnableWirelessADB"
+  if pm_has net.dinglisch.android.taskerm; then
+    am broadcast -a net.dinglisch.android.tasker.ACTION_TASK \
+      --es task_name EnableWirelessADB net.dinglisch.android.taskerm >/dev/null 2>&1; return 0
+  fi
+  return 1
+}
+pm_has() { adb -s "localhost:$PORT" shell pm list packages 2>/dev/null | grep -q "$1" || command -v "$1" >/dev/null; }
+
+echo "Enabling wireless debugging..."; enable_wireless || { echo "no enable path (Shizuku/Tasker)"; exit 1; }
+sleep 3
+
+# --- discover TLS port via mDNS, transfer to stable tcp ---
+disable_wireless() { sh_shizuku "settings put global adb_wifi_enabled 0" >/dev/null; }
+TPORT=$(python "$HELPER" 2>/dev/null)
+[ -z "$TPORT" ] && { echo "ERROR: no mDNS TLS port (WiFi connected & paired?)"; disable_wireless; exit 1; }
+echo "  TLS port $TPORT"
+adb connect "localhost:$TPORT" >/dev/null 2>&1
+adb devices | grep -q "localhost:$TPORT[[:space:]]*device" || { echo "connect failed (paired?)"; disable_wireless; exit 1; }
+adb -s "localhost:$TPORT" tcpip "$PORT"; sleep 3
+adb connect "localhost:$PORT" >/dev/null 2>&1; sleep 1; adb reconnect offline >/dev/null 2>&1
+
+# --- close wireless debugging: we have tcp now (minimal exposure) ---
+echo "Disabling wireless debugging (tcp $PORT stays up)..."; disable_wireless
+
+adb -s "localhost:$PORT" shell true >/dev/null 2>&1 \
+  && echo "OK — localhost:$PORT up, wireless OFF ($(adb -s localhost:$PORT shell getprop ro.product.model|tr -d '\r'))" \
+  || { echo "ERROR: verify $PORT failed"; exit 1; }
