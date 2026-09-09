@@ -1,5 +1,36 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-09-09 23:07
+
+### v1.4 — החייאת adb-over-tcp דרך mDNS + פאנל UI
+
+#### מה בוצע?
+
+**1. תיקון `adb-fix-port` — mDNS במקום setprop**
+
+- הטריק הישן (setprop דרך Shizuku) מת ב-SELinux של Android 16: `setprop
+  service.adb.tcp.port` מ-uid 2000 מחזיר rc=1, ה-prop נשאר ריק, והסקריפט הישן
+  דיווח "Done" כוזב.
+- המנגנון החדש: `bin/adb-mdns-port.py` (zeroconf) מגלה את פורט ה-TLS מ-
+  `_adb-tls-connect._tcp` (כמו ש-Shizuku עושה דרך NsdManager), ואז `adb tcpip 5588`.
+- פורט ה-TLS **דינמי** (נצפה 38163→40865) — חובה mDNS, לא פורט קבוע/brute-force.
+- נוסף **אימות אמיתי** (`adb shell true`) במקום דיווח-הצלחה כוזב.
+
+**2. פאנל UI — `panel/`**
+
+- `adb-panel.py` — פאנל Termux:GUI עם **WebView** (HTML/CSS מלא): סטטוס חי
+  ל-ADB/Shizuku/Tunnel (בדיקת Cloudflare API אמיתית, לא pgrep), וכפתורי
+  Fix Port / נתק / Shizuku / Tunnel.
+- `panel-launch.sh` — משגר את הפאנל ולוחץ "allow Javascript" על הדיאלוג
+  אוטומטית (מזהה אותו ב-`uiautomator`), כי המתג "Allow Javascript without dialog"
+  הוא **באג-persistence** ב-Termux:GUI (EncryptedSharedPreferences, לא נשמר).
+- `tgui.mjs` — **binding ל-Node.js ל-Termux:GUI שנכתב מאפס** (לא היה קיים בעולם;
+  רק Python/C/Bash/Rust). `adb-smoke.mjs` מדגים אותו.
+
+**גוצ'ה שנצרב:** `adb tcpip`/`adb usb` מאתחלים adbd ו**הורגים את Shizuku** (הוא
+רוכב על חיבור ה-adb); לשחזר עם `<pkgdir>/lib/arm64/libshizuku.so` דרך `pm path`.
+וגם: `adb -s localhost:5588 shell` = uid 2000, superset של rish.
+
 ## 2026-05-26 12:45
 
 ### v1.3 — agent skill, תיקון ADB reconnect, תיעוד אוטומציה
