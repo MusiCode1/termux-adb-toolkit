@@ -1,3 +1,6 @@
+// ⚠️ Node.js ONLY. Bun on Termux runs under a proot/glibc-runner wrapper that
+// isolates Linux abstract-namespace unix sockets — which this protocol requires
+// (am-socket broadcast + our client sockets). Bun cannot speak it here; use `node`.
 // tgui.mjs — minimal Node.js binding for the Termux:GUI plugin.
 // Protocol reverse-learned from the official Python binding (ground truth) + Protocol.md.
 // Scope: just what an all-JS WebView panel needs — connect, activity, webview, events.

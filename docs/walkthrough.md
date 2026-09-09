@@ -1,5 +1,27 @@
 # Walkthrough — termux-adb-toolkit
 
+## 2026-09-10 00:42
+
+### v1.6 — תיעוד: ה-binding הוא Node בלבד (bun חסום ב-proot)
+
+#### מה נלמד?
+
+נחקר לעומק אם `panel/tgui.mjs` יכול לרוץ גם תחת Bun. **התשובה: לא, וזו לא בעיה
+בקוד:**
+
+- **bun-on-termux רץ דרך wrapper מבוסס-proot** — יש `BUN_TERMUX_WRAPPER` ב-env,
+  ומותקנים `grun`/`glibc-runner`/`proot`. bun צריך glibc ו-Termux הוא bionic,
+  אז מריצים אותו בתוך שכבת-תאימות.
+- **proot מבודד את ה-abstract-namespace unix sockets** של לינוקס. הפרוטוקול של
+  Termux:GUI בנוי **כולו** עליהם — גם ה-am-socket ל-broadcast, וגם ה-sockets
+  שהפלאגין מתחבר אליהם. שניהם חוצים את גבול ה-proot ולכן לא נגישים.
+- **תסמין:** תחת bun, `termux-am broadcast` → `Could not connect to socket:
+  No such file or directory` (ה-spawn תקין; החיבור ל-abstract socket לא).
+- **לא ניתן לתיקון בקוד** — מגבלת runtime. Node רץ נייטיב (בלי proot) ועובד מושלם.
+
+**מסקנה:** הבינדינג הוא Node. נכתבה גם גרסת runtime-agnostic (עם `Bun.listen`)
+שאומתה תחת node, אך לא נשמרה — ה-branch של bun הוא dead code כל עוד bun תחת proot.
+
 ## 2026-09-10 00:22
 
 ### v1.5 — adb-bootstrap: הדלקת wireless דרך Shizuku + חשיפה מינימלית
